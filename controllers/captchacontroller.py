@@ -6,6 +6,8 @@ from flask_restful import Resource, reqparse, abort
 from recaptcha.client import captcha
 import urllib
 import re
+from robot import CaptchaPage
+
 
 class CaptchaController(Resource):
     PUBLIC_KEY = '6LdaFvsSAAAAAHJrA4ETTAcWRaXpcKKMWx_ErwU-'
@@ -18,22 +20,13 @@ class CaptchaController(Resource):
         self.parser.add_argument('recaptcha_response_field', type=str)
 
     def get(self):
-        r = urllib.urlopen("%snoscript?k=%s&is_audio=true" % (self.GOOGLE_URL_API, self.PUBLIC_KEY) )
-        inner_html = r.read()
-        soup = BeautifulSOAP(inner_html)
-        audio_link = re.findall("(image\?c=.*?)\">", inner_html)
-
-        if audio_link is []:
-            raise Exception("Audio link not Found")
-
-        #find the challenge_field_value
-        recaptcha_challenge_field = soup.find('input', {'id':'recaptcha_challenge_field'})['value']
-
-        #build the url te return
-
+        captcha_page = CaptchaPage()
+        audio_link = captcha_page.get_url_sound()
+        recaptcha_challenge_field = captcha_page.get_recaptcha_challenge_field()
+        captcha_page.close()
         response = {
             'recaptcha_challenge_field': recaptcha_challenge_field,
-            'audio_link'               : self.GOOGLE_URL_API + audio_link[0]
+            'audio_link'               : audio_link
         }
         return Response(json.dumps(response))
 

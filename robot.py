@@ -1,6 +1,8 @@
-from time import sleep
-import urllib
+import ConfigParser
+import os
 from selenium.webdriver import Firefox
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+
 
 class Element(object):
     def __init__(self, element):
@@ -20,14 +22,25 @@ class Button(Element):
 class CaptchaPage():
     def __init__(self):
         print "Captcha Page Initializing"
-        self.driver = Firefox()
-        self.driver.get("http://localhost:5000/captcha/")
 
-    def download_sound(self, path):
-        print "Downloading Sound to: "  + path
+        parser = ConfigParser.ConfigParser()
+        base_path = os.path.join(os.environ['HOME'], '.mozilla/firefox/')
+        parser.read(os.path.join(base_path, "profiles.ini"))
+        profile_path = os.path.join(base_path, filter(lambda x: x[0].lower() == 'path', parser.items('Profile0'))[0][1])
+        try:
+            profile = FirefoxProfile(profile_path)
+        except OSError:
+            raise Exception("You must execute the following command:\nsudo chmod +r -R %s" % profile_path)
+        self.driver = Firefox(profile)
+
+        self.driver.get("file://%s/index.html" % os.getcwdu())
+
+    def get_url_sound(self):
         self.driver.find_element_by_xpath('//*[@id="recaptcha_switch_audio"]').click()
-        url = self.driver.find_element_by_xpath('//*[@id="recaptcha_audio_download"]').get_attribute('href')
-        urllib.urlretrieve(url, path)
+        return self.driver.find_element_by_xpath('//*[@id="recaptcha_audio_download"]').get_attribute('href')
+
+    def get_recaptcha_challenge_field(self):
+        return self.driver.find_element_by_xpath('//*[@id="recaptcha_challenge_field"]').get_attribute('value')
 
     def get_captcha_textbox(self):
         print "Getting Captcha Textbox"
@@ -43,8 +56,4 @@ class CaptchaPage():
 
 
 if __name__ == "__main__":
-    captcha_page = CaptchaPage()
-    captcha_page.download_sound("/tmp/captcha.mp3")
-    captcha_page.get_captcha_textbox().set_text("HOLAA")
-    captcha_page.get_submit_button().click()
-    captcha_page.close()
+    pass
